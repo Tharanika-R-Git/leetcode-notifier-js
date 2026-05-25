@@ -346,7 +346,7 @@ app.use((req, _res, next) => {
   next();
 });
 
-// Rate limiters - remove custom keyGenerator
+// Rate limiters
 const subscribeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max:      10,
@@ -498,6 +498,83 @@ app.post('/api/unsubscribe', verifyLimiter, async (req, res) => {
   }
 });
 
+// ================= SLOT CONFIGURATION =================
+
+const SLOTS = [
+  { name: 'morning',   hourStart: 8,  hourEnd: 9,  subject: "Today's LeetCode problem" },
+  { name: 'afternoon', hourStart: 14, hourEnd: 15, subject: 'Afternoon reminder — LeetCode' },
+  { name: 'night',     hourStart: 19, hourEnd: 20, subject: 'Final reminder — LeetCode' },
+  { name: 'test',      hourStart: 0,  hourEnd: 23, subject: 'Daily LeetCode problem' }, // Always enabled for testing
+];
+
+function getSlotForHour(hour) {
+  return SLOTS.find((s) => hour >= s.hourStart && hour <= s.hourEnd);
+}
+
+function getEmailTemplate(title, slug, unsubLink, slot) {
+  const problemUrl = `https://leetcode.com/problems/${slug}/`;
+  
+  const templates = {
+    morning: `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Good morning! 🌅</h2>
+      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
+        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Today's problem:</p>
+        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
+      </div>
+      <a href="${problemUrl}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Solve Now →</a>
+      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">Start your day with coding!</p>
+      <p style="color: #d1d5db; margin: 20px 0 0 0; font-size: 12px;">
+        <a href="${unsubLink}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
+      </p>
+    </div>`,
+    
+    afternoon: `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Afternoon check-in ☀️</h2>
+      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #f59e0b;">
+        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Don't forget to solve:</p>
+        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
+      </div>
+      <a href="${problemUrl}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Solve Now →</a>
+      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">You've got this! 💪</p>
+      <p style="color: #d1d5db; margin: 20px 0 0 0; font-size: 12px;">
+        <a href="${unsubLink}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
+      </p>
+    </div>`,
+    
+    night: `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Last chance! 🌙</h2>
+      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #ef4444;">
+        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Complete today's problem:</p>
+        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
+      </div>
+      <a href="${problemUrl}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Solve Now →</a>
+      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">End your day with a win! ✨</p>
+      <p style="color: #d1d5db; margin: 20px 0 0 0; font-size: 12px;">
+        <a href="${unsubLink}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
+      </p>
+    </div>`,
+    
+    test: `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Daily Problem 🧪</h2>
+      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #8b5cf6;">
+        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Today's challenge:</p>
+        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
+      </div>
+      <a href="${problemUrl}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #8b5cf6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Solve Now →</a>
+      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">Keep grinding! 🔥</p>
+      <p style="color: #d1d5db; margin: 20px 0 0 0; font-size: 12px;">
+        <a href="${unsubLink}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
+      </p>
+    </div>`
+  };
+
+  return templates[slot] || templates.test;
+}
+
 app.post('/api/scheduler', async (req, res) => {
   // Constant-time comparison to prevent timing attacks
   const incomingSecret = req.body?.secret ?? '';
@@ -512,7 +589,6 @@ app.post('/api/scheduler', async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-
   try {
     const { data: users, error: usersErr } = await supabase
       .from('users')
@@ -524,116 +600,78 @@ app.post('/api/scheduler', async (req, res) => {
     if (!users?.length) {
       return res.status(200).json({ message: 'No subscribers to notify', sent: 0 });
     }
-      let slot, subject, body;
-    if (hour >= 8 && hour <= 9) {
-  slot = 'morning';
-  subject = "Today's LeetCode";
-  body = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Good morning! 🌅</h2>
-      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
-        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Today's problem:</p>
-        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
-      </div>
-      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">Start your day with coding!</p>
-    </div>
-  `;
-} else if (hour >= 14 && hour <= 15) {
-  slot = 'afternoon';
-  subject = 'Reminder';
-  body = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Afternoon check-in ☀️</h2>
-      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #f59e0b;">
-        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Don't forget to solve:</p>
-        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
-      </div>
-      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">You've got this! 💪</p>
-    </div>
-  `;
-} else if (hour >= 19 && hour <= 20) {
-  slot = 'night';
-  subject = 'Final Reminder';
-  body = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Last chance! 🌙</h2>
-      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #ef4444;">
-        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Complete today's problem:</p>
-        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
-      </div>
-      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">End your day with a win! ✨</p>
-    </div>
-  `;
-}  else if(true){
-  slot = 'test';
-  subject = "Today's LeetCode";
-  body = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Daily Problem 🧪</h2>
-      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #8b5cf6;">
-        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Today's challenge:</p>
-        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
-      </div>
-      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">Keep grinding! 🔥</p>
-    </div>
-  `;
-}
- 
-
 
     const { title, slug } = await getDailyProblem();
-    const todayStr        = new Date().toISOString().split('T')[0];
-    const now             = new Date();
-    let sent              = 0;
-    let skipped           = 0;
+    const todayStr = new Date().toISOString().split('T')[0];
 
-    const SLOTS = [
-      { name: 'morning',   hourStart: 8,  hourEnd: 9,  subject: "Today's LeetCode problem" },
-      { name: 'afternoon', hourStart: 14, hourEnd: 15, subject: 'Afternoon reminder — LeetCode' },
-      { name: 'night',     hourStart: 19, hourEnd: 20, subject: 'Final reminder — LeetCode' },
-    ];
+    let sent = 0;
+    let skipped = 0;
 
     // Batch solvedToday checks to avoid serial awaits slowing down large user lists
     const userResults = await Promise.allSettled(
       users.map(async (user) => {
         try {
-          const localHour = new Date(
-            now.toLocaleString('en-US', { timeZone: user.timezone })
-          ).getHours();
+          // Calculate user's local hour based on their timezone
+          const userLocalTime = new Date(
+            new Date().toLocaleString('en-US', { timeZone: user.timezone })
+          );
+          const localHour = userLocalTime.getHours();
 
-          const slot = SLOTS.find((s) => localHour >= s.hourStart && localHour <= s.hourEnd);
-          if (!slot) return { skip: true, reason: 'not in a send window' };
-
-          if (user.last_sent_date === todayStr && user.last_sent_slot === slot.name) {
-            return { skip: true, reason: 'already sent this slot' };
+          // Find the slot that matches the user's local hour
+          const slot = getSlotForHour(localHour);
+          if (!slot) {
+            return { skip: true, reason: 'not in a send window', user: user.email };
           }
 
-          const alreadySolved = await solvedToday(user.leetcode_username, slug);
-          if (alreadySolved) return { skip: true, reason: 'already solved' };
+          // Check if we already sent this slot today
+          if (user.last_sent_date === todayStr && user.last_sent_slot === slot.name) {
+            return { skip: true, reason: 'already sent this slot', user: user.email };
+          }
 
+          // Check if user already solved today's problem
+          const alreadySolved = await solvedToday(user.leetcode_username, slug);
+          if (alreadySolved) {
+            return { skip: true, reason: 'already solved', user: user.email };
+          }
+
+          // Send email
           const unsubLink = `${FRONTEND_URL}/unsubscribe?token=${user.verification_token}`;
+          const html = getEmailTemplate(title, slug, unsubLink, slot.name);
+          
           await emailQueue.add('reminder', {
-            to:      user.email,
+            to: user.email,
             subject: slot.subject,
-            html:    reminderEmailHtml({ title, slug, unsubLink, slot: slot.name }),
+            html: html,
           });
 
+          // Update last sent info
           await supabase
             .from('users')
             .update({ last_sent_date: todayStr, last_sent_slot: slot.name })
             .eq('id', user.id);
 
-          return { skip: false };
+          return { skip: false, user: user.email, slot: slot.name };
         } catch (err) {
           log.error(`Scheduler error for user ${user.id}:`, err.message);
-          return { skip: true, reason: 'error' };
+          return { skip: true, reason: 'error', user: user.email };
         }
       })
     );
 
+    // Process results
     for (const result of userResults) {
-      if (result.status === 'fulfilled' && !result.value?.skip) sent++;
-      else skipped++;
+      if (result.status === 'fulfilled') {
+        if (result.value.skip) {
+          skipped++;
+          log.info(`Skipped ${result.value.user} (${result.value.reason})`);
+        } else {
+          sent++;
+          log.info(`Sent to ${result.value.user} (${result.value.slot})`);
+        }
+      } else {
+        skipped++;
+        log.error(`Promise rejected:`, result.reason);
+      }
     }
 
     log.info(`Scheduler done — sent: ${sent}, skipped: ${skipped}`);
