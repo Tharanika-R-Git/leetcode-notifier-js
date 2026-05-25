@@ -504,7 +504,7 @@ const SLOTS = [
   { name: 'morning',   hourStart: 8,  hourEnd: 9,  subject: "Today's LeetCode problem" },
   { name: 'afternoon', hourStart: 14, hourEnd: 15, subject: 'Afternoon reminder — LeetCode' },
   { name: 'night',     hourStart: 19, hourEnd: 20, subject: 'Final reminder — LeetCode' },
-  { name: 'test',      hourStart: 0,  hourEnd: 23, subject: 'Daily LeetCode problem' }, // Always enabled for testing
+  // { name: 'test',      hourStart: 0,  hourEnd: 23, subject: 'Daily LeetCode problem' }, // Always enabled for testing
 ];
 
 function getSlotForHour(hour) {
@@ -557,19 +557,19 @@ function getEmailTemplate(title, slug, unsubLink, slot) {
       </p>
     </div>`,
     
-    test: `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-      <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Daily Problem 🧪</h2>
-      <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #8b5cf6;">
-        <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Today's challenge:</p>
-        <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
-      </div>
-      <a href="${problemUrl}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #8b5cf6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Solve Now →</a>
-      <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">Keep grinding! 🔥</p>
-      <p style="color: #d1d5db; margin: 20px 0 0 0; font-size: 12px;">
-        <a href="${unsubLink}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
-      </p>
-    </div>`
+    // test: `
+    // <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+    //   <h2 style="color: #1f2937; margin: 0 0 12px 0; font-size: 18px;">Daily Problem 🧪</h2>
+    //   <div style="background: white; padding: 16px; border-radius: 6px; border-left: 4px solid #8b5cf6;">
+    //     <p style="color: #6b7280; margin: 0 0 8px 0; font-size: 14px;">Today's challenge:</p>
+    //     <p style="color: #1f2937; margin: 0; font-size: 16px; font-weight: 600;">${title}</p>
+    //   </div>
+    //   <a href="${problemUrl}" style="display: inline-block; margin-top: 16px; padding: 10px 20px; background: #8b5cf6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Solve Now →</a>
+    //   <p style="color: #9ca3af; font-size: 13px; margin: 12px 0 0 0;">Keep grinding! 🔥</p>
+    //   <p style="color: #d1d5db; margin: 20px 0 0 0; font-size: 12px;">
+    //     <a href="${unsubLink}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
+    //   </p>
+    // </div>`
   };
 
   return templates[slot] || templates.test;
