@@ -326,10 +326,8 @@ app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = [
-      'https://leetcode-daily-problem-tracker-js.vercel.app',
-      'https://leetcode-daily-problem-tracker-js.vercel.app/',
-      'http://localhost:5173',
-      'http://localhost:3000',
+      'https://leetcode-notifier-js.vercel.app/',
+      'https://leetcode-notifier-js.vercel.app'
     ];
     
     if (!origin || allowedOrigins.includes(origin)) {
