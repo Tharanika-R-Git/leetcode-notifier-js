@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, useSearchParams, useNavigate, Routes, Route } from 'react-router-dom';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://leetcode-notifier-js-backend.onrender.com';
 
 
 function SubscribePage() {
