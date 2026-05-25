@@ -1,0 +1,21 @@
+name: LeetCode Email Scheduler
+
+on:
+  schedule:
+    # Runs every hour
+    - cron: "0 * * * *"
+
+  workflow_dispatch:
+
+jobs:
+  run-scheduler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call Backend Scheduler API
+        run: |
+          curl -X POST "${{ secrets.BACKEND_URL }}/api/scheduler" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "secret":"${{ secrets.CRON_SECRET }}"
+          }'
